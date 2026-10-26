@@ -172,21 +172,39 @@ The overwrite is written in blocks (default 1 MB) rather than the entire file at
 
 ## Edge Cases and Safety Guarantees
 
-### Symlinks
+### Symlinks and Hard Links
 
-Symlinks are resolved to their real path via `os.path.realpath` before shredding. The resolved path is what gets overwritten. Guttman will not follow a symlink to a file outside the paths you specify.
+Symlinks are refused by default: Guttman does not resolve or follow symlinks, does not shred symlink targets, and does not remove symlink entries. Both top-level symlink arguments and symlinks encountered during recursive directory traversal (`-r`) are skipped and reported as errors with a non-zero exit status (exit 1).
 
-### Read-Only Files
+Multiply-linked files (`st_nlink > 1`) are refused by default. Files with multiple hard links are skipped without modification to prevent silently overwriting or corrupting another file name referencing the same inode.
 
-If a file's permissions do not allow writing, Guttman `chmod`s it writable (`stat.S_IRUSR | stat.S_IWUSR`) before overwriting, then proceeds normally. The inode permissions are restored to read-only after shredding, then the file is unlinked.
+### Descriptor-Based Verification and Residual Race Disclosure
+
+Files are opened using raw descriptors with `O_NOFOLLOW` and `O_NONBLOCK` before inspecting file type and attributes with `fstat`. Only regular files (`stat.S_ISREG`) are processed; FIFOs, sockets, devices, and directories are refused without hanging or unlinking.
+
+Read-only files are verified on a read-only descriptor before being made writable via `os.fchmod` on the descriptor itself, avoiding pathname-based TOCTOU races.
+
+Where supported by the platform, directory traversal uses directory-relative descriptors (`dir_fd`) to anchor the parent directory, records `(st_dev, st_ino)` from the opened file descriptor, and re-checks the directory entry before unlinking.
+
+**Residual race disclosure:** While `dir_fd` anchors the directory, the pre-unlink identity verification and `unlink` are not atomic; a concurrent process could theoretically replace the directory entry between the check and the unlink. Therefore, the safety guarantee holds only when the caller maintains exclusive control over the target directory (no hostile concurrent modification). Furthermore, `O_NOFOLLOW` covers only the trailing path component; parent-directory replacement is not prevented. On platforms lacking directory-descriptor support, pathname operations are used as a fallback and directory concurrency safety cannot be guaranteed.
+
+### Verification and Random Passes
+
+With `--verify`, each deterministic pass (DoD passes 1–2, Gutmann fixed passes) is verified by reading back and comparing bytes against the expected pattern. Any short read, empty read (EOF), or zero progress triggers an immediate verification failure, aborting deletion without unlinking the file.
+
+Random passes (generated via `os.urandom`) are not verified during `--verify` because random bytes are generated on the fly and not retained or buffered in memory.
 
 ### Interrupted Shreds
 
-If a shred is interrupted mid-pass (SIGINT, power loss, etc.), the file will be in an indeterminate state: some passes may be complete, the current pass may be partial, and subsequent passes have not run. The file **should not be assumed securely deleted** in this state. A warning is printed if an exception is caught mid-shred. Re-running Guttman on the file will start a fresh shred sequence.
+If a shred is interrupted mid-pass (SIGINT/KeyboardInterrupt, power loss, etc.), the file will remain on disk in an indeterminate state: some passes may be complete, the current pass partial, and subsequent passes unexecuted. A warning is printed to stderr indicating indeterminate file state and that the file should not be treated as securely deleted, returning exit code 130.
 
-### Directories
+### Recursive Traversal and Failure Handling
 
-With `-r`, Guttman descends into directories recursively. Files are shredded in directory-walk order. After all files in a directory are shredded, the (now-empty) directory is removed with `os.rmdir`. Symlinks encountered during recursive traversal are treated as files (the symlink itself is removed, but the link target is not followed).
+With `-r`, Guttman traverses directories with `followlinks=False`. Symlinks and hardlinks are skipped with warnings and counted as errors. If an individual file fails to shred or an empty directory cannot be removed, Guttman reports the error to stderr, continues processing remaining entries in the tree, and exits with a non-zero exit status (exit 1) at completion.
+
+### Python and Platform Support
+
+Guttman supports Python 3.10 and 3.12, validated by an aggregate CI status check (`test`) across all matrix legs. Support for Python 3.8 in the automated CI matrix has been retired in favor of supported LTS runners (Option B), while the codebase avoids 3.9+ exclusive syntax to preserve backward runtime compatibility.
 
 ---
 

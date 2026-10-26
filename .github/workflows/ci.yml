@@ -8,8 +8,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.8", "3.10", "3.12"]
     steps:
@@ -24,3 +26,16 @@ jobs:
           pip install pytest
       - name: Run tests
         run: python -m pytest tests/ -v
+
+  # Aggregate gate: branch protection requires the context `test`.
+  # Fails unless every matrix leg succeeded (not skipped, cancelled or failed).
+  test-gate:
+    name: test
+    if: always()
+    needs: [test]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all matrix legs to succeed
+        run: |
+          echo "matrix result: ${{ needs.test.result }}"
+          test "${{ needs.test.result }}" = "success"

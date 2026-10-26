@@ -67,6 +67,11 @@ def main() -> int:
             errors += 1
             continue
 
+        if os.path.islink(target):
+            print(f"guttman: {target}: symlinks are not supported", file=sys.stderr)
+            errors += 1
+            continue
+
         try:
             if os.path.isdir(target):
                 if not args.recursive:
@@ -78,7 +83,9 @@ def main() -> int:
                     continue
                 if args.verbose:
                     print(f"shredding directory: {target}")
-                shredder.shred_directory(target, passes)
+                dir_errors = shredder.shred_directory(target, passes)
+                if dir_errors:
+                    errors += dir_errors
             else:
                 if args.verbose:
                     print(f"shredding: {target}")
