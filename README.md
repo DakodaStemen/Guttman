@@ -2,6 +2,7 @@
 
 A command-line utility for secure file deletion on Linux. Guttman overwrites file contents with deterministic and random byte patterns before unlinking the inode, implementing the DoD 5220.22-M standard and Peter Gutmann's 35-pass method from his 1996 paper.
 
+[![CI](https://github.com/DakodaStemen/Guttman/actions/workflows/ci.yml/badge.svg)](https://github.com/DakodaStemen/Guttman/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.6+-3776AB.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
