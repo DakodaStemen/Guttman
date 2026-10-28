@@ -6,7 +6,6 @@ doesn't. They are heuristics: a missing warning is NOT a guarantee.
 """
 import os
 from dataclasses import dataclass
-from typing import List, Optional
 
 COW_FS = {"btrfs", "zfs", "bcachefs", "nilfs2", "f2fs"}
 JOURNAL_FS = {"ext3", "ext4", "xfs", "jfs", "reiserfs", "ntfs", "ntfs3"}
@@ -39,7 +38,7 @@ class Mount:
     options: str
 
 
-def parse_mountinfo(text: str) -> List[Mount]:
+def parse_mountinfo(text: str) -> list[Mount]:
     mounts = []
     for line in text.splitlines():
         left, sep, right = line.partition(" - ")
@@ -54,7 +53,7 @@ def parse_mountinfo(text: str) -> List[Mount]:
     return mounts
 
 
-def find_mount(path: str, mounts: List[Mount]) -> Optional[Mount]:
+def find_mount(path: str, mounts: list[Mount]) -> Mount | None:
     path = os.path.realpath(path)
     best = None
     for m in mounts:
@@ -109,7 +108,7 @@ def _traits_from_sysfs(node: str, depth: int = 0) -> dict:
     return out
 
 
-def analyze_fs(fstype: str, options: str) -> List[Finding]:
+def analyze_fs(fstype: str, options: str) -> list[Finding]:
     f = []
     opts = set(options.split(","))
     if fstype in COW_FS:
@@ -133,9 +132,9 @@ def analyze_fs(fstype: str, options: str) -> List[Finding]:
     return f
 
 
-def analyze_path(path: str, mountinfo: Optional[str] = None, sysfs: str = "/sys") -> List[Finding]:
+def analyze_path(path: str, mountinfo: str | None = None, sysfs: str = "/sys") -> list[Finding]:
     """Findings for the storage that holds `path` (an existing file or dir)."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     if not os.path.exists("/proc/self/mountinfo") and mountinfo is None:
         return [Finding("info", "unsupported", "storage detection is Linux-only; no checks run")]
     text = mountinfo if mountinfo is not None else _read("/proc/self/mountinfo") or ""

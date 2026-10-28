@@ -15,7 +15,6 @@ import re
 import stat
 import sys
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 from guttman.detect import find_mount, parse_mountinfo, _read
 
@@ -29,15 +28,15 @@ WARNING = (
 @dataclass
 class DeviceInfo:
     target: str
-    fstype: Optional[str] = None
-    devnode: Optional[str] = None        # e.g. /dev/nvme0n1p2 (what holds the target)
-    disk: Optional[str] = None           # whole disk name, e.g. nvme0n1
+    fstype: str | None = None
+    devnode: str | None = None        # e.g. /dev/nvme0n1p2 (what holds the target)
+    disk: str | None = None           # whole disk name, e.g. nvme0n1
     kind: str = "unknown"                # nvme | sata-or-scsi | mmc | virtual | unknown
-    rotational: Optional[bool] = None
+    rotational: bool | None = None
     luks: bool = False
-    dm_name: Optional[str] = None
-    underlying: List[str] = field(default_factory=list)   # whole disks under a dm stack
-    notes: List[str] = field(default_factory=list)
+    dm_name: str | None = None
+    underlying: list[str] = field(default_factory=list)   # whole disks under a dm stack
+    notes: list[str] = field(default_factory=list)
 
 
 def _kind(disk: str) -> str:
@@ -52,7 +51,7 @@ def _kind(disk: str) -> str:
     return "unknown"
 
 
-def _node_for_devnum(devnum: int, sysfs: str) -> Optional[str]:
+def _node_for_devnum(devnum: int, sysfs: str) -> str | None:
     p = os.path.join(sysfs, "dev", "block", f"{os.major(devnum)}:{os.minor(devnum)}")
     return os.path.realpath(p) if os.path.exists(p) else None
 
@@ -91,7 +90,7 @@ def _inspect_node(node: str, info: DeviceInfo, sysfs: str, depth: int) -> None:
         info.underlying.append(name)
 
 
-def inspect_target(target: str, mountinfo: Optional[str] = None, sysfs: str = "/sys") -> DeviceInfo:
+def inspect_target(target: str, mountinfo: str | None = None, sysfs: str = "/sys") -> DeviceInfo:
     info = DeviceInfo(target=target)
     st = os.stat(target)
     if stat.S_ISBLK(st.st_mode):
@@ -112,7 +111,7 @@ def inspect_target(target: str, mountinfo: Optional[str] = None, sysfs: str = "/
 
 
 # ----------------------------------------------------------------------
-def _classification(info: DeviceInfo) -> List[str]:
+def _classification(info: DeviceInfo) -> list[str]:
     out = []
     if info.fstype in {"btrfs", "zfs", "bcachefs", "f2fs", "nilfs2"}:
         out.append(f"filesystem {info.fstype} is copy-on-write/log-structured: per-file overwrite does not work.")
@@ -165,7 +164,7 @@ def advise(info: DeviceInfo) -> str:
         add(f"  nvme sanitize /dev/{ctrl} --sanact=4              # crypto erase (if supported)")
         add(f"  nvme sanitize /dev/{ctrl} --sanact=2              # block erase (if supported)")
         add(f"  nvme sanitize-log /dev/{ctrl}                     # poll until finished")
-        add(f"  # alternative if sanitize is unsupported (weaker guarantee):")
+        add("  # alternative if sanitize is unsupported (weaker guarantee):")
         add(f"  nvme format {dev} --ses=2                         # crypto-erase format (--ses=1 = user-data erase)")
         add("")
     if k in ("sata-or-scsi",) or any(re.match(r"^(sd|hd)[a-z]+$", u) for u in info.underlying):
@@ -189,7 +188,7 @@ def advise(info: DeviceInfo) -> str:
         add("Cryptographic erase (cryptsetup luksErase) applies only to LUKS volumes; none was")
         add("detected under this target. If you use LUKS elsewhere: encrypt first, destroy the key later.")
     add("")
-    if info.rotational is True and not (info.fstype in {"btrfs", "zfs", "bcachefs", "f2fs", "nilfs2"}):
+    if info.rotational is True and info.fstype not in {"btrfs", "zfs", "bcachefs", "f2fs", "nilfs2"}:
         add("Rotational disk, single file: `guttman -m dod FILE` is a Clear-level technique.")
         add("Whole rotational disk: ATA Secure Erase above, or a single full-device overwrite pass.")
     else:

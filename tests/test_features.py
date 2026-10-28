@@ -6,7 +6,7 @@ import sys
 import pytest
 
 from guttman import cli, detect
-from guttman.patterns import RANDOM, _tile, dod_passes, gutmann_passes
+from guttman.patterns import _tile, dod_passes, gutmann_passes
 from guttman.progress import Progress
 from guttman.shredder import BLOCK, Shredder, VerifyError
 
@@ -159,7 +159,6 @@ def test_parse_and_find_mount():
     ("/srv/f", "journal"), ("/mnt/nas/f", "network"),
 ])
 def test_fs_findings(path, code, tmp_path):
-    codes = {f.code for f in detect.analyze_path("/", mountinfo=MOUNTINFO.replace("/ /", "/ /")) } if False else None
     ms = detect.parse_mountinfo(MOUNTINFO)
     m = detect.find_mount(path, ms)
     assert code in {f.code for f in detect.analyze_fs(m.fstype, m.options)}

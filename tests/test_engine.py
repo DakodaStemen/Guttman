@@ -1,10 +1,9 @@
 """Filename scrubbing, sparse files, I/O modes."""
 import os
-import subprocess
 
 import pytest
 
-from guttman.patterns import RANDOM, dod_passes
+from guttman.patterns import dod_passes
 from guttman.shredder import Shredder
 
 
