@@ -4,10 +4,8 @@ import tempfile
 
 import pytest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from patterns import RANDOM, _tile, dod_passes, gutmann_passes, random_passes
-from shredder import Shredder
+from guttman.patterns import RANDOM, _tile, dod_passes, gutmann_passes, random_passes
+from guttman.shredder import BLOCK, Shredder, VerifyError
 
 
 # --- pattern tests ---
@@ -95,7 +93,7 @@ def test_directory_shred(tmp_path):
     sub.mkdir()
     (sub / "c.txt").write_bytes(b"nested file")
 
-    Shredder().shred_directory(str(tmp_path), dod_passes())
+    assert Shredder().shred_directory(str(tmp_path), dod_passes()) == 0
     assert not tmp_path.exists()
 
 def test_verbose_output(capsys):

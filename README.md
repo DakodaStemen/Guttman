@@ -1,226 +1,166 @@
-# Guttman
-
-A command-line utility for secure file deletion on Linux. Guttman overwrites file contents with deterministic and random byte patterns before unlinking the inode, implementing the DoD 5220.22-M standard and Peter Gutmann's 35-pass method from his 1996 paper.
+```text
+   ____ _   _ _____ _____ __  __    _    _   _
+  / ___| | | |_   _|_   _|  \/  |  / \  | \ | |
+ | |  _| | | | | |   | | | |\/| | / _ \ |  \| |
+ | |_| | |_| | | |   | | | |  | |/ ___ \| |\  |
+  \____|\___/  |_|   |_| |_|  |_/_/   \_\_| \_|
+        secure file shredder · DoD 5220.22-M · 35-pass
+```
 
 [![CI](https://github.com/DakodaStemen/Guttman/actions/workflows/ci.yml/badge.svg)](https://github.com/DakodaStemen/Guttman/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.6+-3776AB.svg)](https://www.python.org)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+Overwrites a file with fixed and random patterns, **optionally reads every pass back to prove it landed**, then unlinks it. Pure standard library. Warns you when your storage makes overwriting unreliable.
 
-## Table of Contents
+![demo](docs/demo.gif)
 
-- [Background](#background)
-- [Threat Model](#threat-model)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Overwrite Methods](#overwrite-methods)
-- [How It Works](#how-it-works)
-- [Edge Cases and Safety Guarantees](#edge-cases-and-safety-guarantees)
-- [Running Tests](#running-tests)
-- [Project Layout](#project-layout)
-- [License](#license)
+> The demo shreds a temp file created by the script ([`docs/demo.sh`](docs/demo.sh)); nothing else is touched.
 
----
+> [!NOTE]
+> **Spelling:** the project is called *Guttman* but the method is named after cryptographer Peter **Gutmann** (one *t*, one *n* at the end). The CLI flag is `--method gutmann`, matching the paper. The repo name is kept as-is.
 
-## Background
-
-Standard file deletion on Linux removes the directory entry and marks the inode and data blocks as free — the actual file data stays on disk until those blocks are overwritten by a future write. On a lightly used filesystem, sensitive data can sit readable in "free" space for days, weeks, or indefinitely.
-
-Guttman makes the overwrite happen intentionally and immediately, using patterns documented in Peter Gutmann's 1996 paper *"Secure Deletion of Data from Magnetic and Solid-State Memory"* (USENIX Security Symposium) and the U.S. Department of Defense's sanitization standard DoD 5220.22-M.
-
-After all overwrite passes complete, the file is truncated to zero bytes, then unlinked. The directory entry disappears last, after the data has been overwritten.
-
----
-
-## Threat Model
-
-### Magnetic Hard Drives (HDDs)
-
-Guttman is most effective on spinning disk. On HDDs with no bad-sector remapping and no journaling that duplicates data, overwrite-based deletion is reliable and well-studied. The DoD 3-pass method is accepted by most security standards as sufficient for classified material.
-
-The Gutmann 35-pass method targets encoding-specific residues on older MFM/RLL/PRML drives. The 27 fixed patterns in the middle of the sequence are specifically designed to cancel out the encoding artifacts those heads leave behind. On modern drives (post-~2001), which universally use PRML encoding at higher densities, only the random passes at the start and end of the Gutmann sequence remain meaningful — but the 35-pass method remains available for completeness and compliance contexts.
-
-### SSDs and Copy-on-Write Filesystems
-
-**Overwrite-based deletion cannot guarantee physical sector erasure on SSDs, btrfs, or ZFS.** Two mechanisms break the assumption:
-
-1. **SSD wear leveling:** The flash controller remaps logical block addresses to physical cells to distribute writes. An overwrite to logical block N may be written to a different physical cell, leaving the original cell intact until the controller reclaims it.
-
-2. **Copy-on-write semantics (btrfs, ZFS):** CoW filesystems never overwrite data in place. A write to an existing block allocates a new block and updates the pointer, leaving the old block accessible in free space until it is garbage-collected.
-
-If your threat model requires assured erasure on SSDs or CoW filesystems, the correct approach is full-disk encryption (LUKS, dm-crypt) combined with key destruction. Encrypt before you store sensitive data; secure deletion then becomes a matter of overwriting or discarding the encryption key — a 32-byte operation guaranteed to be effective.
-
----
-
-## Installation
-
-No dependencies outside the standard library.
+## Install
 
 ```bash
-git clone https://github.com/DakodaStemen/Guttman.git
-cd Guttman
-python3 guttman.py --help
+pip install git+https://github.com/DakodaStemen/Guttman.git   # gives you the `guttman` command
+# or from a checkout
+pip install -e ".[test]"
 ```
 
-**Install as a system command:**
-
-```bash
-chmod +x guttman.py
-sudo ln -s "$(pwd)/guttman.py" /usr/local/bin/guttman
-```
-
----
+Python 3.10+, Linux. No runtime dependencies.
 
 ## Usage
 
-```
-guttman [-m METHOD] [-p N] [-v] [--verify] [-r] FILE [FILE ...]
-
-Arguments:
-  FILE              One or more files to shred. Directories require -r.
-
-Options:
-  -m, --method      Overwrite method: dod, gutmann, random (default: dod)
-  -p, --passes N    Number of passes for --method=random (default: 3)
-  -v, --verbose     Print each pass name/number as it executes
-      --verify      After each deterministic pass, read back and compare bytes
-  -r, --recursive   Recursively shred all files under a directory
+```bash
+guttman secret.txt                      # DoD 3-pass
+guttman --verify secret.txt             # + read back every pass
+guttman -n -m gutmann -r ./private/     # dry run: show plan and warnings, change nothing
+guttman -m gutmann --verify -r ./private/
+guttman -m random -p 10 key.pem
+python -m guttman --help
 ```
 
-### Examples
+| Option | Meaning |
+|---|---|
+| `-m {dod,gutmann,random}` | method (default `dod`) |
+| `-p N` | pass count for `random` |
+| `--verify` | read back each pass (random included) and compare |
+| `-n`, `--dry-run` | report what would happen; modify nothing |
+| `--progress / --no-progress` | progress bar on stderr (default: on when stderr is a TTY) |
+| `-q` | silence storage warnings |
+| `-r` | recurse into directories |
+| `-v` | per-pass logging |
+
+Exit codes: `0` ok, `1` any failure (including verify mismatch), `130` interrupted.
+
+## Pipeline
+
+```mermaid
+flowchart TD
+    A[path] --> B{symlink?}
+    B -- yes --> L[unlink link only<br/>target untouched]
+    B -- no --> C[detect storage:<br/>SSD/TRIM, CoW, journal]
+    C --> D[warnings to stderr]
+    D --> E{--dry-run?}
+    E -- yes --> P[print plan, exit]
+    E -- no --> F[chmod u+w if needed]
+    F --> G[write pass N<br/>in 768 KiB blocks]
+    G --> H[fsync]
+    H --> I{--verify?}
+    I -- yes --> J[drop page cache,<br/>read back, compare hash]
+    J -- mismatch --> X[VerifyError:<br/>file kept, exit 1]
+    J -- ok --> K
+    I -- no --> K{more passes?}
+    K -- yes --> G
+    K -- no --> M[ftruncate 0 + fsync]
+    M --> N[unlink]
+```
+
+## Methods
+
+| Method | Passes | Sequence |
+|---|---|---|
+| `dod` | 3 | `0x00`, `0xFF`, random |
+| `gutmann` | 35 | 4 random, 27 fixed patterns from the 1996 paper, 4 random |
+| `random` | N | N random passes (`os.urandom`) |
+
+> [!NOTE]
+> The Gutmann fixed patterns target MFM/RLL-era encodings. On modern drives they add time, not security (Gutmann says so in the paper's 2003 epilogue). DoD 5220.22-M is likewise superseded by NIST SP 800-88 for current media.
+
+## Verification
+
+With `--verify`, after each pass the file is `fsync`ed, its page cache is dropped with `posix_fadvise(DONTNEED)`, and it is read back and compared to a BLAKE2b digest computed while writing. That works for random passes too, without storing the random data. A mismatch raises `VerifyError`, the file is **not** unlinked, and the exit code is 1.
+
+> [!WARNING]
+> Read-back confirms what the *OS/device returns*. A drive's write cache or a remapping layer can still answer from somewhere other than the original location. It catches I/O errors and silent corruption, not remapping.
+
+## Storage warnings
+
+Guttman checks the mount (`/proc/self/mountinfo`) and block device (`/sys`) under each target and warns about:
+
+- **SSD / NVMe** (`queue/rotational = 0`), noting whether TRIM (`discard_max_bytes > 0`) is available. Resolves partitions and device-mapper/LVM stacks.
+- **Copy-on-write / log-structured**: btrfs, ZFS, bcachefs, f2fs, nilfs2.
+- **Journaling**: ext3/4 `data=journal` (warning: data is in the journal); metadata journals on ext4/xfs/jfs/ntfs (note).
+- **Layered, RAM, network**: overlayfs, tmpfs, NFS, CIFS, FUSE.
+
+## Threat model
+
+> [!CAUTION]
+> **SSDs and flash:** wear-levelling remaps logical blocks. Overwriting block *N* may program a different cell and leave the old one intact. TRIM tells the drive space is free; it is not a secure erase.
+
+> [!CAUTION]
+> **Copy-on-write filesystems (btrfs, ZFS):** writes allocate new blocks. The old data stays in free space or in snapshots.
+
+> [!WARNING]
+> **Journals, snapshots, backups, caches:** copies made elsewhere (ext4 `data=journal`, LVM/btrfs/ZFS snapshots, backups, thumbnails, swap, editor temp files) are out of reach.
+
+> [!IMPORTANT]
+> Detection is heuristic. **No warning is not a guarantee.** For flash, CoW or unknown storage, use full-disk encryption from the start and destroy the key (or use the device's ATA Secure Erase / NVMe Sanitize for whole-drive wipes).
+
+Behavioral notes:
+- **Symlinks** are removed, never followed. The target is left alone.
+- **Hard links:** all names see the overwritten data; a warning is printed.
+- **Read-only files** are made owner-writable, then shredded.
+- **Interrupted shreds** (Ctrl-C, power loss) leave indeterminate content. Do not treat as deleted; re-run.
+- **Directories** are walked bottom-up; each file is shredded, then the empty directory is removed. Failures are counted and reflected in the exit code.
+
+## Benchmarks
+
+Measured with [`benchmarks/bench.py`](benchmarks/bench.py): one 64 MiB temp file per run, median of 3, `fsync` after every pass, includes the final unlink.
+
+Environment: AMD Ryzen 7 5800H, Linux 7.0 x86_64, Python 3.14.7, ext4 on LVM over NVMe.
+
+| Method | Passes | Median time | Effective MiB/s | Raw write MiB/s |
+|---|---|---|---|---|
+| dod | 3 | 1.77 s | 36 | 108 |
+| dod + verify | 3 | 2.27 s | 28 | 84 |
+| random x3 | 3 | 3.11 s | 21 | 62 |
+| gutmann | 35 | 14.46 s | 4 | 155 |
+| gutmann + verify | 35 | 27.43 s | 2 | 82 |
+
+*Effective* = file size / wall time. *Raw* = bytes written (size x passes) / wall time. These come from a single machine and are noisy (fsync latency dominates the small-file numbers; the `random` row is bounded by `os.urandom`). Re-run `python benchmarks/bench.py` on your hardware.
+
+## Development
 
 ```bash
-# DoD 3-pass with readback verification
-guttman --verify -v secrets.txt
-
-# Gutmann 35-pass on a directory tree
-guttman -m gutmann -r -v ./private/
-
-# 10 random passes on multiple files
-guttman -m random -p 10 key.pem cert.pem
-
-# Pipe a file list from find
-find /tmp/scratch -type f | xargs guttman -m dod
-
-# Shred and verify a single file, silent
-guttman --verify /home/user/.ssh/id_rsa
+pip install -e ".[test]"
+python -m pytest
+python benchmarks/bench.py --size-mib 64 --runs 3
 ```
 
----
-
-## Overwrite Methods
-
-### `dod` — DoD 5220.22-M (default)
-
-3 passes. The U.S. Department of Defense sanitization standard for clearing magnetic storage media.
-
-| Pass | Pattern |
-|------|---------|
-| 1 | `0x00` — all zeros |
-| 2 | `0xFF` — all ones |
-| 3 | Random bytes from `os.urandom` |
-
-Each pass is followed by `fsync`. The random final pass ensures the last written data on disk is not a predictable pattern.
-
-### `gutmann` — Gutmann 35-pass
-
-35 passes. Implements the full sequence from Peter Gutmann's 1996 paper, designed to address encoding artifacts on a broad range of magnetic recording techniques.
-
-| Passes | Pattern |
-|--------|---------|
-| 1–4 | Random bytes (os.urandom) |
-| 5–11 | Fixed: 0x55, 0xAA, 0x92/0x49/0x24, 0x49/0x24/0x92, 0x24/0x92/0x49 |
-| 12–27 | Fixed patterns targeting specific MFM/RLL/PRML encoding artifacts |
-| 28–31 | Remaining fixed patterns |
-| 32–35 | Random bytes (os.urandom) |
-
-The 27 middle fixed patterns are only meaningful for drives using the specific encoding they target. On modern PRML drives, the 4+4 random passes at the boundaries provide the useful work; the 27 fixed passes are included for completeness and compliance.
-
-### `random` — Random N-pass
-
-`N` passes (configurable with `-p`). Each pass writes a fresh `os.urandom` buffer to the entire file. Use this when you want more than 3 passes but do not need the specific Gutmann patterns.
-
----
-
-## How It Works
-
-### Raw File Descriptors
-
-Files are opened with `os.open` using raw POSIX file descriptors rather than Python's buffered I/O (`open()`). Python's buffered layer can hold data in a userspace buffer and delay the actual write syscall — unacceptable when the goal is to ensure bytes reach the kernel write path on every pass. `os.write` on a raw fd bypasses this buffer.
-
-### fsync Per Pass
-
-After writing every pass, `os.fsync(fd)` is called before proceeding to the next. `fsync` flushes the kernel's page cache for that file descriptor to the storage device's write cache. It does not guarantee that the drive's internal write cache has been flushed to platters (that requires the drive to issue a FLUSH CACHE command), but it is the strongest guarantee available at the userspace level without raw device access.
-
-### Truncate Then Unlink
-
-After all passes complete:
-1. The file is truncated to zero bytes with `os.ftruncate`.
-2. The file descriptor is closed.
-3. The file is unlinked with `os.unlink`.
-
-Truncating first ensures the inode's block pointers are cleared before the directory entry is removed. On most filesystems, this is redundant (the data was already overwritten), but it removes ambiguity in the filesystem's free-block accounting.
-
-### Pattern Generation
-
-Deterministic patterns (DoD passes 1–2, all Gutmann fixed passes) are generated by `patterns.py` using `bytes([value]) * block_size`. Random passes use `os.urandom(block_size)` for each block, ensuring cryptographically random data from the OS entropy pool.
-
-The overwrite is written in blocks (default 1 MB) rather than the entire file at once to keep memory usage bounded regardless of file size.
-
----
-
-## Edge Cases and Safety Guarantees
-
-### Symlinks
-
-Symlinks are resolved to their real path via `os.path.realpath` before shredding. The resolved path is what gets overwritten. Guttman will not follow a symlink to a file outside the paths you specify.
-
-### Read-Only Files
-
-If a file's permissions do not allow writing, Guttman `chmod`s it writable (`stat.S_IRUSR | stat.S_IWUSR`) before overwriting, then proceeds normally. The inode permissions are restored to read-only after shredding, then the file is unlinked.
-
-### Interrupted Shreds
-
-If a shred is interrupted mid-pass (SIGINT, power loss, etc.), the file will be in an indeterminate state: some passes may be complete, the current pass may be partial, and subsequent passes have not run. The file **should not be assumed securely deleted** in this state. A warning is printed if an exception is caught mid-shred. Re-running Guttman on the file will start a fresh shred sequence.
-
-### Directories
-
-With `-r`, Guttman descends into directories recursively. Files are shredded in directory-walk order. After all files in a directory are shredded, the (now-empty) directory is removed with `os.rmdir`. Symlinks encountered during recursive traversal are treated as files (the symlink itself is removed, but the link target is not followed).
-
----
-
-## Running Tests
-
-```bash
-python3 -m pytest tests/ -v
+```text
+guttman/
+├── cli.py        argument parsing, orchestration
+├── shredder.py   write/verify loop, dry-run, directory walk
+├── patterns.py   DoD / Gutmann / random sequences
+├── detect.py     SSD/TRIM, CoW, journal detection
+└── progress.py   progress bar
+tests/            pytest suite (patterns, shredding, verify, dry-run, detection)
+benchmarks/       throughput measurement
+docs/             demo.gif + demo.sh
 ```
-
-Tests cover:
-- DoD, Gutmann, and random pass sequences
-- File truncation and unlinking
-- Verification pass correctness
-- Symlink resolution
-- Recursive directory shredding
-- Interrupt handling (partial shred detection)
-
----
-
-## Project Layout
-
-```
-Guttman/
-├── guttman.py        CLI entry point, argument parsing, shred orchestration
-├── shredder.py       Core shredder: file open, pass loop, fsync, truncate, unlink
-├── patterns.py       Pattern generation for DoD and Gutmann pass sequences
-├── tests/            pytest test suite
-└── README.md
-```
-
----
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
-
-Copyright (c) 2021–2026 Dakoda Stemen
+MIT, see [LICENSE](LICENSE). Copyright (c) 2021-2026 Dakoda Stemen.
