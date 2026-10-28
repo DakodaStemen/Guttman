@@ -1,6 +1,6 @@
-import os
+"""Overwrite pattern sequences (DoD 5220.22-M, Gutmann 35-pass, random)."""
 
-# sentinel value — means "generate os.urandom for this pass, don't tile a fixed pattern"
+# sentinel value - means "generate os.urandom for this pass, don't tile a fixed pattern"
 RANDOM = "random"
 
 
@@ -12,15 +12,16 @@ def _tile(pattern: bytes, size: int) -> bytes:
 
 
 def dod_passes() -> list:
-    # DoD 5220.22-M: zeros, ones, then random. Simple, fast, good enough for most cases.
+    # DoD 5220.22-M (as commonly implemented): zeros, ones, then random.
     return [b"\x00", b"\xff", RANDOM]
 
 
 def gutmann_passes() -> list:
     # Peter Gutmann's 35-pass method from his 1996 paper.
-    # The fixed patterns (passes 5-31) were designed to target residual magnetic
-    # encoding on MFM and RLL drives. On modern drives they're mostly cargo cult,
-    # but the method is still requested by compliance teams and paranoid users alike.
+    # The fixed patterns (passes 5-31) target residual magnetic encoding on
+    # MFM and RLL drives. On modern drives they are largely moot (Gutmann said
+    # so himself in the paper's 2003 epilogue), but the method is still
+    # requested by compliance checklists.
     # Structure: 4 random, 27 fixed, 4 random.
     fixed = [
         b"\x55", b"\xaa",
@@ -36,3 +37,9 @@ def gutmann_passes() -> list:
 
 def random_passes(n: int) -> list:
     return [RANDOM] * n
+
+
+METHODS = {
+    "dod": dod_passes,
+    "gutmann": gutmann_passes,
+}

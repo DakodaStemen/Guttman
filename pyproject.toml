@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guttman"
+dynamic = ["version"]
+description = "Secure file shredder: DoD 5220.22-M, Gutmann 35-pass and random overwrite with read-back verification"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Dakoda Stemen" }]
+keywords = ["secure-delete", "shred", "gutmann", "dod-5220.22-m", "security"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Security",
+    "Topic :: System :: Filesystems",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+guttman = "guttman.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/DakodaStemen/Guttman"
+
+[tool.setuptools.dynamic]
+version = { attr = "guttman.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["guttman*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
