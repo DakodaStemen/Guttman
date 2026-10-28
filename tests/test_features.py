@@ -73,22 +73,29 @@ def test_dry_run_directory_keeps_tree(tmp_path):
     assert (tmp_path / "d" / "a").read_bytes() == b"a"
 
 
-def test_cli_dry_run_exit_zero(tmp_path):
+@pytest.fixture
+def hdd_storage(monkeypatch):
+    """Pretend the target is on plain rotational ext4 so the fail-closed policy
+    (which would refuse on this host's real SSD/NVMe) does not interfere."""
+    monkeypatch.setattr(cli, "analyze_path", lambda path: [])
+
+
+def test_cli_dry_run_exit_zero(tmp_path, hdd_storage):
     f = tmp_path / "a"
     f.write_bytes(b"a")
     assert cli.main(["-n", "-q", str(f)]) == 0
     assert f.exists()
 
 
-def test_cli_shreds_and_reports_missing(tmp_path):
+def test_cli_shreds_and_reports_missing(tmp_path, hdd_storage):
     f = tmp_path / "a"
     f.write_bytes(b"a")
-    assert cli.main(["-q", "--verify", str(f)]) == 0
+    assert cli.main(["-q", "--readback", str(f)]) == 0
     assert not f.exists()
     assert cli.main(["-q", str(tmp_path / "nope")]) == 1
 
 
-def test_cli_directory_needs_r(tmp_path):
+def test_cli_directory_needs_r(tmp_path, hdd_storage):
     assert cli.main(["-q", str(tmp_path)]) == 1
 
 

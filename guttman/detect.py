@@ -21,6 +21,16 @@ class Finding:
     message: str
 
 
+# Findings that mean "overwriting this file cannot be relied on" or "we cannot
+# tell". The CLI refuses these unless --force-unsafe is given (fail closed).
+BLOCKING_CODES = frozenset({"ssd", "cow", "unknown-fs", "device-unknown", "unsupported"})
+
+
+def blocking(findings):
+    """Findings that make the CLI refuse to proceed by default."""
+    return [f for f in findings if f.code in BLOCKING_CODES]
+
+
 @dataclass
 class Mount:
     mountpoint: str

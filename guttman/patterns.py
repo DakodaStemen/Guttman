@@ -19,9 +19,9 @@ def dod_passes() -> list:
 def gutmann_passes() -> list:
     # Peter Gutmann's 35-pass method from his 1996 paper.
     # The fixed patterns (passes 5-31) target residual magnetic encoding on
-    # MFM and RLL drives. On modern drives they are largely moot (Gutmann said
-    # so himself in the paper's 2003 epilogue), but the method is still
-    # requested by compliance checklists.
+    # MFM and RLL drives. On modern drives they are largely moot (Gutmann says
+    # so himself in the paper's epilogue), but the method is still requested
+    # by legacy checklists. LEGACY: kept for compatibility, not recommended.
     # Structure: 4 random, 27 fixed, 4 random.
     fixed = [
         b"\x55", b"\xaa",
@@ -38,6 +38,9 @@ def gutmann_passes() -> list:
 def random_passes(n: int) -> list:
     return [RANDOM] * n
 
+
+# Methods that are kept for compatibility only.
+LEGACY_METHODS = frozenset({"gutmann"})
 
 METHODS = {
     "dod": dod_passes,
