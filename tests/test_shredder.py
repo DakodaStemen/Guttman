@@ -1,11 +1,9 @@
 import os
-import sys
 import tempfile
 
-import pytest
 
 from guttman.patterns import RANDOM, _tile, dod_passes, gutmann_passes, random_passes
-from guttman.shredder import BLOCK, Shredder, VerifyError
+from guttman.shredder import Shredder
 
 
 # --- pattern tests ---

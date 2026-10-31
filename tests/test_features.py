@@ -6,7 +6,7 @@ import sys
 import pytest
 
 from guttman import cli, detect
-from guttman.patterns import RANDOM, _tile, dod_passes, gutmann_passes
+from guttman.patterns import _tile, dod_passes, gutmann_passes
 from guttman.progress import Progress
 from guttman.shredder import BLOCK, Shredder, VerifyError
 
@@ -73,22 +73,29 @@ def test_dry_run_directory_keeps_tree(tmp_path):
     assert (tmp_path / "d" / "a").read_bytes() == b"a"
 
 
-def test_cli_dry_run_exit_zero(tmp_path):
+@pytest.fixture
+def hdd_storage(monkeypatch):
+    """Pretend the target is on plain rotational ext4 so the fail-closed policy
+    (which would refuse on this host's real SSD/NVMe) does not interfere."""
+    monkeypatch.setattr(cli, "analyze_path", lambda path: [])
+
+
+def test_cli_dry_run_exit_zero(tmp_path, hdd_storage):
     f = tmp_path / "a"
     f.write_bytes(b"a")
     assert cli.main(["-n", "-q", str(f)]) == 0
     assert f.exists()
 
 
-def test_cli_shreds_and_reports_missing(tmp_path):
+def test_cli_shreds_and_reports_missing(tmp_path, hdd_storage):
     f = tmp_path / "a"
     f.write_bytes(b"a")
-    assert cli.main(["-q", "--verify", str(f)]) == 0
+    assert cli.main(["-q", "--readback", str(f)]) == 0
     assert not f.exists()
     assert cli.main(["-q", str(tmp_path / "nope")]) == 1
 
 
-def test_cli_directory_needs_r(tmp_path):
+def test_cli_directory_needs_r(tmp_path, hdd_storage):
     assert cli.main(["-q", str(tmp_path)]) == 1
 
 
@@ -152,7 +159,6 @@ def test_parse_and_find_mount():
     ("/srv/f", "journal"), ("/mnt/nas/f", "network"),
 ])
 def test_fs_findings(path, code, tmp_path):
-    codes = {f.code for f in detect.analyze_path("/", mountinfo=MOUNTINFO.replace("/ /", "/ /")) } if False else None
     ms = detect.parse_mountinfo(MOUNTINFO)
     m = detect.find_mount(path, ms)
     assert code in {f.code for f in detect.analyze_fs(m.fstype, m.options)}

@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "guttman"
 dynamic = ["version"]
-description = "Secure file shredder: DoD 5220.22-M, Gutmann 35-pass and random overwrite with read-back verification"
+description = "Best-effort secure file shredder for Linux with read-back verification and storage-aware warnings (SSD, btrfs, ZFS)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Dakoda Stemen" }]
-keywords = ["secure-delete", "shred", "gutmann", "dod-5220.22-m", "security"]
+keywords = ["secure-delete", "shred", "secure-erase", "crypto-erase", "data-sanitization", "nist-800-88", "security"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -27,6 +27,8 @@ guttman = "guttman.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/DakodaStemen/Guttman"
+Changelog = "https://github.com/DakodaStemen/Guttman/blob/main/CHANGELOG.md"
+"Threat model" = "https://github.com/DakodaStemen/Guttman/blob/main/THREAT_MODEL.md"
 
 [tool.setuptools.dynamic]
 version = { attr = "guttman.__version__" }
@@ -36,3 +38,14 @@ include = ["guttman*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "W", "B", "UP"]
+ignore = ["UP015"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
