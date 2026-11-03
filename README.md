@@ -1,8 +1,10 @@
-# Guttman
+# Erado
+
+Formerly Guttman.
 
 **Best-effort secure file shredder for Linux with read-back verification and storage-aware warnings: tells you when overwriting cannot work (SSD, btrfs, ZFS) and what to use instead.**
 
-[![CI](https://github.com/DakodaStemen/Guttman/actions/workflows/ci.yml/badge.svg)](https://github.com/DakodaStemen/Guttman/actions/workflows/ci.yml)
+[![CI](https://github.com/DakodaStemen/erado/actions/workflows/ci.yml/badge.svg)](https://github.com/DakodaStemen/erado/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -25,7 +27,7 @@ Overwrites a file in place, optionally reads each pass back, scrubs the file nam
 ## Install
 
 ```bash
-pip install git+https://github.com/DakodaStemen/Guttman.git   # gives you the `guttman` command
+pip install git+https://github.com/DakodaStemen/erado.git   # gives you the `guttman` command
 # or from a checkout
 pip install -e ".[test]"
 ```

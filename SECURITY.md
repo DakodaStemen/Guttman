@@ -7,7 +7,7 @@ Only the latest release on PyPI / `main` receives fixes.
 ## Reporting a vulnerability
 
 Please report privately via GitHub: **Security → Report a vulnerability**
-(<https://github.com/DakodaStemen/Guttman/security/advisories/new>).
+(<https://github.com/DakodaStemen/erado/security/advisories/new>).
 Do not open a public issue for an undisclosed vulnerability.
 
 Include the version (`guttman --version`), filesystem/device, and a
