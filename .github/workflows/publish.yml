@@ -17,6 +17,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -37,6 +38,7 @@ jobs:
     # Only publish from a published release, never from a manual dry dispatch.
     if: github.event_name == 'release'
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     environment:
       name: pypi
       url: https://pypi.org/p/guttman
