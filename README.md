@@ -11,7 +11,7 @@ Formerly Guttman.
 Overwrites a file in place, optionally reads each pass back, scrubs the file name, then unlinks it. Pure standard library. **It refuses to run where overwriting cannot work**, and `guttman advise` prints the whole-device commands that do.
 
 > [!CAUTION]
-> ### When NOT to use Guttman
+> **When NOT to use Guttman**
 > Per-file overwrite is **not a reliable way to destroy data** on:
 >
 > | Situation | Why | Use instead |
@@ -175,9 +175,8 @@ Environment: AMD Ryzen 7 5800H, Linux 7.0 x86_64, Python 3.14.7, ext4 on LVM ove
 ## Development
 
 ```bash
-pip install -e ".[test]" ruff
-ruff check .
-python -m pytest -rs        # loop-mount btrfs/ext4 tests need root or passwordless sudo, else they skip
+make setup   # .venv with the package, pytest, ruff, build, twine (needs uv)
+make ci      # ruff check + pytest + build; loop-mount btrfs/ext4 tests need root or passwordless sudo, else they skip
 ```
 
 ```text
@@ -190,7 +189,7 @@ guttman/
 └── progress.py   progress bar
 ```
 
-See also [SECURITY.md](SECURITY.md) and [CHANGELOG.md](CHANGELOG.md).
+See also [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md) and [docs/adr](docs/adr/README.md).
 
 ## License
 

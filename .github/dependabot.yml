@@ -1,4 +1,4 @@
-# Managed by Dependabot version updates. Weekly, minor/patch bumps grouped per ecosystem.
+# Dependabot: weekly, grouped, one open PR per ecosystem, 7-day cooldown.
 version: 2
 updates:
   - package-ecosystem: pip
@@ -8,22 +8,25 @@ updates:
       day: monday
       time: "06:00"
       timezone: America/Los_Angeles
-    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 1
     commit-message:
       prefix: deps
     groups:
-      pip_minor_patch:
+      pip-minor-patch:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: America/Los_Angeles
-    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 1
     commit-message:
       prefix: deps
     groups:
-      github_actions_minor_patch:
-        update-types: [minor, patch]
+      github-actions:
+        patterns: ["*"]

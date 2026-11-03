@@ -2,9 +2,21 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- 2026-11-03: Engineering baseline: `CONTRIBUTING.md`, PR and issue templates, `.editorconfig`, `.gitattributes`, markdownlint config, pre-commit config, `docs/adr/` with ADR-0001, and a `Makefile` with `setup`, `lint`, `test`, `build` and `ci`.
+- 2026-11-03: CI runs a docs lint job.
+
+### Changed
+
+- 2026-11-03: CI and publish workflows get `concurrency`, job timeouts and no persisted checkout credentials. Dependabot is now weekly (pip) and monthly (Actions), grouped, one open PR each, 7-day cooldown.
+
 ## [0.3.0] - Unreleased
 
 ### Changed (behaviour)
+
 - **Fail-closed by default:** guttman now refuses (exit 2) on SSD/NVMe,
   copy-on-write filesystems (btrfs, ZFS, bcachefs, f2fs, nilfs2) and storage it
   cannot identify. Override with `--force-unsafe`. `-q` does not hide refusals.
@@ -21,6 +33,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - Exit code 2 added for policy refusals / `--strict`.
 
 ### Added
+
 - `guttman advise PATH|DEVICE`: prints (never runs) `nvme sanitize`,
   `hdparm --security-erase`, `blkdiscard -s`, `cryptsetup luksErase` with an
   SP 800-88 Clear/Purge mapping.
@@ -31,10 +44,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - CI: ruff, pip-audit, build check. Trusted-publishing release workflow (not run).
 
 ### Removed
+
 - `docs/demo.gif` / `docs/demo.sh` (replaced by Markdown-native examples).
 
 ## [0.2.0]
+
 - Package layout, dry-run, progress, storage warnings, read-back per pass, CI fix, docs.
 
 ## [0.1.0]
+
 - Initial release.
