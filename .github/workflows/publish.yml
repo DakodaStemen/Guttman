@@ -2,7 +2,7 @@ name: Publish to PyPI
 
 # PyPI Trusted Publishing (OIDC): no API token is stored in the repo.
 # One-time setup on pypi.org (project "guttman" -> Publishing): add a trusted
-# publisher for owner DakodaStemen, repo Guttman, workflow publish.yml,
+# publisher for owner DakodaStemen, repo erado, workflow publish.yml,
 # environment "pypi". Then create a GitHub Release to trigger this.
 # This workflow has NOT been run.
 

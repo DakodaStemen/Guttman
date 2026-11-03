@@ -26,9 +26,9 @@ test = ["pytest"]
 guttman = "guttman.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/DakodaStemen/Guttman"
-Changelog = "https://github.com/DakodaStemen/Guttman/blob/main/CHANGELOG.md"
-"Threat model" = "https://github.com/DakodaStemen/Guttman/blob/main/THREAT_MODEL.md"
+Homepage = "https://github.com/DakodaStemen/erado"
+Changelog = "https://github.com/DakodaStemen/erado/blob/main/CHANGELOG.md"
+"Threat model" = "https://github.com/DakodaStemen/erado/blob/main/THREAT_MODEL.md"
 
 [tool.setuptools.dynamic]
 version = { attr = "guttman.__version__" }
